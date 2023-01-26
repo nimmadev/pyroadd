@@ -1,1 +1,1 @@
-from pyro-pam import pyroadd
+from .pyro_add import pyroadd

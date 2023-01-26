@@ -35,7 +35,7 @@
 ### Signup
 
 ```python
-import pyroadd
+from pyroadd import pyroadd
 
 app = pyroadd('config.json')
 app.Signup('logger-name', 'work_dir')
@@ -43,7 +43,7 @@ app.Signup('logger-name', 'work_dir')
 ### Login
 
 ```python
-import pyroadd
+from pyroadd import pyroadd
 
 app = pyroadd('config.json')
 app.Login('logger-name', 'work_dir', False)
@@ -52,7 +52,7 @@ app.Login('logger-name', 'work_dir', False)
 ### Get data
 
 ```python
-import pyroadd
+from pyroadd import pyroadd
 
 app = pyroadd('config.json')
 app.get_data('logger-name', 'work_dir', 'username' or 'id')
@@ -64,7 +64,7 @@ app.get_data('logger-name', 'work_dir', 'username' or 'id')
 ### add member
 
 ```python
-import pyroadd
+from pyroadd import pyroadd
 
 app = pyroadd('config.json')
 applist = app.Login('logger-name', 'work_dir', True)

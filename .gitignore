@@ -1,0 +1,5 @@
+.pyroadd.egg-info
+.dist
+dist/*
+pyroadd.egg-info/*
+pyroadd/pyc*
