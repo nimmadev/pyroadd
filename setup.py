@@ -6,7 +6,7 @@ long_description = pypandoc.convert_file('README.md', 'rst')
 
 setuptools.setup(
     name="pyroadd",
-    version="0.0.2",
+    version="0.0.3",
     autor="nimmadev",
     description="module to add members to telegam group",
     long_description=long_description,

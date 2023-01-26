@@ -42,7 +42,7 @@ class pyroadd(object):
         self.config = json.load(open(self.root / config, 'r',
                                      encoding='utf-8'))
         self.source_groupid = int(str("-100")+str(self.config['group_source']))
-        self.target_groupid =int(str("-100")+str(self.config['group_source']))
+        self.target_groupid =int(str("-100")+str(self.config['group_target']))
         self.source_group = self.config.get('group_source_username', None)
         self.target_group = self.config.get('group_target_username', None)
         self.accounts = self.config['accounts']
