@@ -9,7 +9,7 @@
 
 ## Config
 
-```config
+```json
 {
     "group_source": "1599603923", # group identifier
     "group_target": "1599603923", # group identifier
@@ -23,8 +23,11 @@
         {
             "phone": "91857100***2",
             "api_id": "676*", # get api key and hashfrom my.telegram.org
-            "api_hash": "eb06d*****b1aeb98ae0f581e"
-        }
+            "api_hash": "eb06d*****b1aeb98ae0f581e",
+            "app_version" : "9.3.3",
+            "device_model" : "Android 10",
+            "system_version" :"Moto G8 Power"
+}
     ]
 }
 ```

@@ -49,16 +49,21 @@ class pyroadd(object):
         self.activelist = ['UserStatus.LONG_AGO', 'UserStatus.LAST_MONTH', 'UserStatus.LAST_WEEK', 'UserStatus.OFFLINE', 'UserStatus.RECENTLY', 'UserStatus.ONLINE' ]
         self.active = []
         self.counterall = {}
+        self.loop = asyncio.get_event_loop()
         for x in dropwhile(lambda y: y != self.config["from_date_active"], self.activelist):
            self.active.append(x)
 
-
-    async def Signup(self, pam_log, work_dir, device_model='Moto G8 Power', system_version='Android 10', app_version="9.3.3"):
+    def Signup(self, pam_log, work_dir):
+        self.loop.run(self._signup(pam_log, work_dir))
+    async def _signup(self, pam_log, work_dir):
         PAM = pamlog(pam_log)
         for account in self.accounts:
             phone = account['phone']
             api_id = int(account['api_id'])
             api_hash = account['api_hash']
+            device_model= account['device_model']
+            system_version= account['system_version']
+            app_version= account['app_version']
             PAM.info(phone)
 
             try:
@@ -75,13 +80,25 @@ class pyroadd(object):
             except Exceptionas as e:
                 PAM.info(f'{e}')
 
-    async def Login(self, pam_log, work_dir, applist):
+    def Login(self, pam_log, work_dir, applist):
+        return self.loop.run(self._login(pam_log, work_dir, applist))
+    async def _login(self, pam_log, work_dir, applist):
         PAM = pamlog(pam_log)
         self.app_list = []
         for account in self.accounts:
             phone = account['phone']
+            api_id = int(account['api_id'])
+            api_hash = account['api_hash']
+            device_model= account['device_model']
+            system_version= account['system_version']
+            app_version= account['app_version']
             try:
-                app = Client(phone, workdir=self.root / work_dir)
+                app = Client(phone, api_id, api_hash,
+                                    app_version=app_version,
+                                  device_model=device_model,
+                                  system_version=system_version,
+                                  lang_code='en',
+                                  workdir=self.root / work_dir)
                 await app.start()
                 if await app.get_me():
                     PAM.info(f'{phone} is logined')
@@ -129,7 +146,9 @@ class pyroadd(object):
                 except:
                     pass
 
-    async def get_data(self, pam_log, work_dir, stop):
+    def get_data(self, pam_log, work_dir, stop):
+        self.loop.run(self._get_data(pam_log, work_dir, stop))
+    async def _get_data(self, pam_log, work_dir, stop):
         PAM = pamlog('PAM-GET-DATA')
         try:
             count = {}
@@ -142,7 +161,16 @@ class pyroadd(object):
         for phonedata in self.accounts:
             first_phone = True
             phone = phonedata["phone"]
-            async with Client(phone, workdir=self.root / work_dir) as app:
+            api_id = int(phonedata['api_id'])
+            api_hash = phonedata['api_hash']
+            device_model= phonedata['device_model']
+            system_version= phonedata['system_version']
+            app_version= phonedata['app_version']
+            async with Client(phone, api_id, api_hash,
+                                    app_version=app_version,
+                                  device_model=device_model,
+                                  system_version=system_version,
+                                  lang_code='en', workdir=self.root / work_dir) as app:
                 if await app.get_me():
                     pass
                 else:
@@ -270,7 +298,9 @@ class pyroadd(object):
             g.write(str(count))
             g.close()
     
-    async def add_member(self,pam_log, work_dir, method, applist):
+    def add_member(self, pam_log, work_dir, method, applist):
+        self.loop.run(self._add_member(pam_log, work_dir, method, applist))
+    async def _add_member(self,pam_log, work_dir, method, applist):
         PAM = pamlog(pam_log)
         user_id = json.load(open( self.root / "data" / "user.json", "r", encoding="utf-8"))
         try:
