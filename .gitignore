@@ -3,3 +3,4 @@
 dist/*
 pyroadd.egg-info/*
 pyroadd/pyc*
+build/*

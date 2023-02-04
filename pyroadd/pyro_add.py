@@ -3,6 +3,7 @@ import json, os, sys
 import gc
 from pyrogram import Client, enums
 from pyrogram.errors import *
+from pyrogram.raw import functions, types
 from pathlib import Path
 from datetime import datetime, timedelta
 import logging
@@ -49,12 +50,12 @@ class pyroadd(object):
         self.activelist = ['UserStatus.LONG_AGO', 'UserStatus.LAST_MONTH', 'UserStatus.LAST_WEEK', 'UserStatus.OFFLINE', 'UserStatus.RECENTLY', 'UserStatus.ONLINE' ]
         self.active = []
         self.counterall = {}
-        self.loop = asyncio.get_event_loop()
+        self.loop = asyncio.run
         for x in dropwhile(lambda y: y != self.config["from_date_active"], self.activelist):
            self.active.append(x)
 
     def Signup(self, pam_log, work_dir):
-        self.loop.run(self._signup(pam_log, work_dir))
+        self.loop(self._signup(pam_log, work_dir))
     async def _signup(self, pam_log, work_dir):
         PAM = pamlog(pam_log)
         for account in self.accounts:
@@ -65,6 +66,8 @@ class pyroadd(object):
             system_version= account['system_version']
             app_version= account['app_version']
             PAM.info(phone)
+            if not (self.root / work_dir).exists():
+                os.makedirs(self.root / work_dir)
 
             try:
                 async with Client(phone,
@@ -75,13 +78,16 @@ class pyroadd(object):
                                   device_model=device_model,
                                   system_version=system_version,
                                   lang_code='en') as app:
+
+                    await app.invoke(functions.account.UpdateStatus(offline=False))
                     if await app.get_me():
                         PAM.info(f'{phone} is logined')
+                        await app.invoke(functions.account.UpdateStatus(offline=True))
             except Exceptionas as e:
                 PAM.info(f'{e}')
 
     def Login(self, pam_log, work_dir, applist):
-        return self.loop.run(self._login(pam_log, work_dir, applist))
+        return self.loop(self._login(pam_log, work_dir, applist))
     async def _login(self, pam_log, work_dir, applist):
         PAM = pamlog(pam_log)
         self.app_list = []
@@ -100,6 +106,7 @@ class pyroadd(object):
                                   lang_code='en',
                                   workdir=self.root / work_dir)
                 await app.start()
+                await app.invoke(functions.account.UpdateStatus(offline=False))
                 if await app.get_me():
                     PAM.info(f'{phone} is logined')
                     if self.config['auto_join'] is True:
@@ -143,11 +150,12 @@ class pyroadd(object):
             for appp in self.app_list:
                 try:
                     await appp.stop()
+                    await app.invoke(functions.account.UpdateStatus(offline=True))
                 except:
                     pass
 
     def get_data(self, pam_log, work_dir, stop):
-        self.loop.run(self._get_data(pam_log, work_dir, stop))
+        self.loop(self._get_data(pam_log, work_dir, stop))
     async def _get_data(self, pam_log, work_dir, stop):
         PAM = pamlog('PAM-GET-DATA')
         try:
@@ -157,67 +165,46 @@ class pyroadd(object):
                 g.close()
         except BaseException:
             pass
-
+        firstrun = True
+        mem = []
         for phonedata in self.accounts:
-            first_phone = True
             phone = phonedata["phone"]
             api_id = int(phonedata['api_id'])
             api_hash = phonedata['api_hash']
             device_model= phonedata['device_model']
             system_version= phonedata['system_version']
             app_version= phonedata['app_version']
-            async with Client(phone, api_id, api_hash,
-                                    app_version=app_version,
-                                  device_model=device_model,
-                                  system_version=system_version,
-                                  lang_code='en', workdir=self.root / work_dir) as app:
-                if await app.get_me():
-                    pass
-                else:
-                    PAM.info(f"{phone} login failed")
-                try:
-                    await app.get_chat(self.source_groupid)
-                except:
-                    PAM.info(
-                        f"{phone} has not joined source chat or RUN login.py")
-                    co = input('will you like to continue Y/N')
-                    if co.lower() == 'n':
-                        PAM.info('Exiting The program')
-                        exit()
-                try:
-                    await app.get_chat(self.target_groupid)
-                except:
-                    PAM.info(
-                        f"{phone} has not joined target chat or RUN login.py")
-                    await asyncio.sleep(1)
-                mem = []
-                async for member in app.get_chat_members(
-                        chat_id=self.source_groupid):
-                    await asyncio.sleep(.0025)
-                    gc.disable()
+            try:
+                async with Client(phone, api_id, api_hash,
+                                        app_version=app_version,
+                                    device_model=device_model,
+                                    system_version=system_version,
+                                    lang_code='en', workdir=self.root / work_dir) as app:
+                    await app.invoke(functions.account.UpdateStatus(offline=False))
+                    if await app.get_me():
+                        pass
+                    else:
+                        PAM.info(f"{phone} login failed")
                     try:
-                        # scrap member
-                        memb = {
-                            "userid": str(member.user.id),
-                            "status": str(member.user.status),
-                            "name": str(member.user.first_name),
-                            "bot": member.user.is_bot,
-                            "username": str(member.user.username)
-                        }
-                        gc.disable()
-                        mem.append(memb)
-                        gc.enable()
-                    except BaseException:
-                        PAM.info('error')
-                if first_phone:
-                    if stop:
-                        first_phone = False
-                    mem2 = []
-                    PAM.info(f'{phone} getting target user data')
+                        await app.get_chat(self.source_groupid)
+                    except:
+                        PAM.info(
+                            f"{phone} has not joined source chat or RUN login.py")
+                        co = input('will you like to continue Y/N')
+                        if co.lower() == 'n':
+                            PAM.info('Exiting The program')
+                            exit()
+                    try:
+                        await app.get_chat(self.target_groupid)
+                    except:
+                        PAM.info(
+                            f"{phone} has not joined target chat or RUN login.py")
+                        await asyncio.sleep(1)
+                    mem = []
                     async for member in app.get_chat_members(
-                            chat_id=self.target_groupid):
+                            chat_id=self.source_groupid):
                         await asyncio.sleep(.0025)
-
+                        gc.disable()
                         try:
                             # scrap member
                             memb = {
@@ -227,33 +214,64 @@ class pyroadd(object):
                                 "bot": member.user.is_bot,
                                 "username": str(member.user.username)
                             }
+                            gc.disable()
+                            mem.append(memb)
+                            gc.enable()
+                        except BaseException:
+                            PAM.info('error')
+                    if firstrun:
+                        mem2 = []
+                        PAM.info(f'{phone} getting target user data')
+                        async for member in app.get_chat_members(
+                                chat_id=self.target_groupid):
+                            await asyncio.sleep(.0025)
 
-                            gc.disable()
-                            mem2.append(memb)
-                            gc.enable()
-                        except BaseException:
-                            PAM.info('error')
-                    mem3 = []
-                    PAM.info(f'{phone} getting admin user data')
-                    async for member in app.get_chat_members(
-                            chat_id=self.source_groupid,
-                            filter=enums.ChatMembersFilter.ADMINISTRATORS):
-                        try:
-                            # scrap member
-                            memb = {
-                                "userid": str(member.user.id),
-                                "name": str(member.user.first_name),
-                                "bot": member.user.is_bot,
-                                "username": str(member.user.username)
-                            }
-                            gc.disable()
-                            mem3.append(memb)
-                            gc.enable()
-                        except BaseException:
-                            PAM.info('error')
+                            try:
+                                # scrap member
+                                memb = {
+                                    "userid": str(member.user.id),
+                                    "status": str(member.user.status),
+                                    "name": str(member.user.first_name),
+                                    "bot": member.user.is_bot,
+                                    "username": str(member.user.username)
+                                }
+
+                                gc.disable()
+                                mem2.append(memb)
+                                gc.enable()
+                            except BaseException:
+                                PAM.info('error')
+                        mem3 = []
+                        PAM.info(f'{phone} getting admin user data')
+                        async for member in app.get_chat_members(
+                                chat_id=self.source_groupid,
+                                filter=enums.ChatMembersFilter.ADMINISTRATORS):
+                            try:
+                                # scrap member
+                                memb = {
+                                    "userid": str(member.user.id),
+                                    "name": str(member.user.first_name),
+                                    "bot": member.user.is_bot,
+                                    "username": str(member.user.username)
+                                }
+                                gc.disable()
+                                mem3.append(memb)
+                                gc.enable()
+                            except BaseException:
+                                PAM.info('error')
+                        firstrun = False
+                    await app.invoke(functions.account.UpdateStatus(offline=True))
                     await app.stop()
-
-                    self.filterus(mem, mem2, mem3)
+                    if stop:
+                        break
+            except UserDeactivatedBan as e:
+                PAM.info(e)
+            if not mem:
+                PAM.info(f"NO DATA")
+            else:
+                self.filterus(mem, mem2, mem3)
+            
+                    
 
     def filterus(self, p1, p2, p4):
         # create logger
@@ -299,7 +317,7 @@ class pyroadd(object):
             g.close()
     
     def add_member(self, pam_log, work_dir, method, applist):
-        self.loop.run(self._add_member(pam_log, work_dir, method, applist))
+        self.loop(self._add_member(pam_log, work_dir, method, applist))
     async def _add_member(self,pam_log, work_dir, method, applist):
         PAM = pamlog(pam_log)
         user_id = json.load(open( self.root / "data" / "user.json", "r", encoding="utf-8"))
@@ -400,75 +418,44 @@ class pyroadd(object):
                     current_user = user_id[counter]["userid"]
                     postion2 = len(applist)
                     PAM.info(f"trying to add {current_user} by : {phone} account-postiton : {postiton + 1} / {postion2}")
+                    await app.invoke(functions.account.UpdateStatus(offline=False))
                     await app.add_chat_members(chat_id=self.target_groupid, user_ids=user_id[counter][usermethod])
+                    await app.invoke(functions.account.UpdateStatus(offline=True))
                     PAM.info(f"{current_user} added success")
                     counter += 1
                     added += 1
                     await prints()
-                except UserBannedInChannel: 
+                except (UserBannedInChannel, PhoneNumberBanned, PeerFlood, FloodWait, ChatAdminRequired, ChannelPrivate) as e: 
+                    await app.invoke(functions.account.UpdateStatus(offline=True))
                     await app.stop()
                     applist.remove(account)  
-                    PAM.info(f'phone number limited')  
+                    PAM.error(f'{e}')  
                     await prints()
-                except UsernameNotOccupied:
-                    PAM.info("user not using username anymore")
+                except (UsernameNotOccupied, UserDeactivatedBan, UserKicked, UserIdInvalid) as e:
+                    await app.invoke(functions.account.UpdateStatus(offline=True))
+                    PAM.error(f"{e}")
                     counter +=1
                     await prints()
-                except UserDeactivatedBan:
-                    PAM.info("user removed from telegram")
-                    counter +=1
-                    await prints()
-                except UserKicked:
-                    PAM.info('this user is banned')
-                    counter +=1
-                    await prints()
-                except PhoneNumberBanned: 
-                    await app.stop()
-                    applist.remove(account)  
-                    PAM.info(f'phone number banned {phone}')  
-                    await prints()
-                except PeerFlood:
-                    applist.remove(account)
-                    await app.stop()
-                    counter +=1
-                    PAM.info(f'{phone} removed for this run')
-                    try: 
-                        await prints()
-                    except:
-                        printfinal()
                 except UserChannelsTooMuch:
+                    await app.invoke(functions.account.UpdateStatus(offline=True))
                     counter += 1
                     uc += 1
                     PAM.info('user already in too many channel')
                     await prints()
-                except FloodWait as e:
-                    applist.remove(account)
-                    await app.stop()
-                    PAM.info(f'{e.value} seconds sleep is required for the account {phone}')
-                except (ChatAdminRequired, ChannelPrivate):
-                    PAM.info("Chat admin permission required or Channel is private")
-                    applist.remove(account)
-                    await app.stop()
-                    await prints()
-                except UserRestricted:
-                    PAM.info("removing this restricted account")
-                    applist.remove(account)
-                    await app.stop()
-                except UserIdInvalid:
-                    PAM.info(f"user invalid or u never met user {phone}")
-                    counter +=1
-                    await prints()
                 except UserNotMutualContact:
+                    await app.invoke(functions.account.UpdateStatus(offline=True))
                     PAM.info('user is not mutal contact')
                     counter += 1
                     um += 1
                     await prints()
-                except PeerIdInvalid as e:
+                except PeerIdInvalid:
+                    await app.invoke(functions.account.UpdateStatus(offline=True))
                     PAM.info("if You see this line many time rerun the get_data.py")
                     #applist.remove(account)
                     counter +=1
                     await prints()
                 except UserPrivacyRestricted:
+                    await app.invoke(functions.account.UpdateStatus(offline=True))
                     PAM.info("user have privacy enabled")
                     counter +=1
                     privacy += 1
@@ -476,6 +463,7 @@ class pyroadd(object):
                 except TimeoutError:
                     PAM.info('network problem was encounterd')
                 except RPCError as e:
+                    await app.invoke(functions.account.UpdateStatus(offline=True))
                     PAM.info(f"{phone} Rpc error")
                     PAM.info(f"{e}")
                     m = user_id[counter][usermethod]
@@ -485,6 +473,7 @@ class pyroadd(object):
                 except OSError:
                     osr +=1
                 except BaseException as e:
+                    await app.invoke(functions.account.UpdateStatus(offline=True))
                     PAM.info(phone, "error info below")
                     PAM.info(f"{e}")
                     m = user_id[counter][usermethod]
@@ -492,6 +481,7 @@ class pyroadd(object):
                     counter +=1
                     await prints()
                 if osr == 30:
+                    await app.invoke(functions.account.UpdateStatus(offline=True))
                     PAM.info("osr is 30")
                     PAM.info('This increase beacuse of internet problem try again later')
                     await prints()

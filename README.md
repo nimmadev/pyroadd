@@ -79,6 +79,6 @@ app.add_member('logger-name', 'work_dir', 'username' or 'id',  applist)
 
 ## install pyroadd
 
-```python
+```bash
 pip install  pyroadd
 ```
